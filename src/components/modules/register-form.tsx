@@ -1,9 +1,10 @@
 "use client";
 
-import { FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Form, FormControl, FormField } from "@/components/ui/form";
+import { FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { Form, FormField, FormItem } from "@/components/ui/form";
 import { useState, useTransition } from "react";
 import { RegisterSchema } from "@/schema";
+import { RegisterFields } from "@/utils/registerFields";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { register } from "@/actions/register";
 import { useForm } from "react-hook-form";
@@ -16,6 +17,8 @@ import FormErrors from "@/components/elements/form-error";
 
 import * as z from "zod";
 
+export type FormValues = z.infer<typeof RegisterSchema>;
+
 const RegisterForm = () => {
   // ============ State ===============
   const [success, setSuccess] = useState<string | undefined>();
@@ -25,22 +28,42 @@ const RegisterForm = () => {
   const [isPending, startTransition] = useTransition();
 
   // ============ Form Setup ===============
-  const form = useForm<z.infer<typeof RegisterSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(RegisterSchema),
     defaultValues: {
       name: "",
       email: "",
       password: "",
+      confirmPassword: "",
     },
   });
 
-  const onSubmit = (values: z.infer<typeof RegisterSchema>) => {
+  // ============ Form Submission ===============
+  const onSubmit = (values: FormValues) => {
     setError("");
     setSuccess("");
     startTransition(() => {
       register(values).then((data) => {
-        setError(data?.error);
-        setSuccess(data?.success);
+        setError("");
+        setSuccess("");
+        if ("success" in data) {
+          setSuccess(data.success);
+          return;
+        }
+        if ("error" in data) {
+          if (typeof data.error === "string") {
+            setError(data.error);
+          } else if (typeof data.error === "object") {
+            Object.entries(data.error).forEach(([field, messages]) => {
+              if (messages?.length) {
+                form.setError(field as keyof FormValues, {
+                  type: "manual",
+                  message: messages[0],
+                });
+              }
+            });
+          }
+        }
       });
     });
   };
@@ -55,71 +78,31 @@ const RegisterForm = () => {
     >
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Name Field */}
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Name</FormLabel>
-                <FormControl>
-                  <Input
-                    type="text"
-                    placeholder="John Doe"
-                    disabled={isPending}
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {RegisterFields.map((field) => (
+            <FormField
+              key={field.name}
+              control={form.control}
+              name={field.name}
+              render={({ field: controller }) => (
+                <FormItem>
+                  <FormLabel>{field.label}</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...controller}
+                      type={field.type}
+                      placeholder={field.placeholder}
+                      disabled={isPending}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          ))}
 
-          {/* Email Field */}
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl>
-                  <Input
-                    type="email"
-                    placeholder="example@domain.com"
-                    disabled={isPending}
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Password Field */}
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Password</FormLabel>
-                <FormControl>
-                  <Input
-                    type="password"
-                    placeholder="••••••••"
-                    disabled={isPending}
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Feedback */}
           {error && <FormErrors message={error} />}
           {success && <FormSuccess message={success} />}
 
-          {/* Submit */}
           <Button type="submit" disabled={isPending} className="w-full">
             Register
           </Button>
