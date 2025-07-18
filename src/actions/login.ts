@@ -1,12 +1,14 @@
 "use server";
 
-import { generateVerificationToken } from "@/lib/token";
+import { generateTwoFactorToken, generateVerificationToken } from "@/lib/token";
+import { sendTwoFactorTokenEmail, sendVerificationEmail } from "@/lib/mail";
 import { DEFAULT_LOGIN_REDIRECT } from "@/route";
-import { sendVerificationEmail } from "@/lib/mail";
+import { getFactorTokenByEmail } from "@/utils/getFactorToken";
 import { getUserByEmail } from "@/lib/user";
 import { LoginSchema } from "@/schema";
 import { AuthError } from "next-auth";
 import { signIn } from "@/auth";
+import { db } from "@/lib/db";
 
 import z from "zod";
 
@@ -16,7 +18,7 @@ export const login = async (values: z.infer<typeof LoginSchema>) => {
     const errors = validatedField.error.flatten().fieldErrors;
     return { error: errors };
   }
-  const { email, password } = validatedField.data;
+  const { email, password, code } = validatedField.data;
   const existingUser = await getUserByEmail(email);
   if (!existingUser || !existingUser.password)
     return { error: "Invalid credentials." };
@@ -27,6 +29,29 @@ export const login = async (values: z.infer<typeof LoginSchema>) => {
       verificationToken.token
     );
     return { success: "Confirmation email sent!" };
+  }
+  if (existingUser.isTwoFactorEnabled) {
+    if (!code) {
+      const twoFactorToken = await generateTwoFactorToken(existingUser.email!);
+      await sendTwoFactorTokenEmail(twoFactorToken.email, twoFactorToken.token);
+      return {
+        twoFactor: true,
+        success: "Two-factor code sent to your email.",
+      };
+    }
+    const existingToken = await getFactorTokenByEmail(existingUser.email!);
+    if (
+      !existingToken ||
+      existingToken.token !== code ||
+      new Date(existingToken.expires) < new Date()
+    )
+      return { error: "Invalid or expired two-factor code." };
+    await db.twoFactorConfirmation.create({
+      data: { userId: existingUser.id },
+    });
+    await db.twoFactorToken.delete({
+      where: { id: existingToken.id },
+    });
   }
   try {
     const result = await signIn("credentials", {
@@ -46,7 +71,7 @@ export const login = async (values: z.infer<typeof LoginSchema>) => {
         case "CredentialsSignin":
           return { error: "Invalid credentials." };
         default:
-          return { error: "An unexpected authentication error occurred." };
+          return { error: "Unexpected authentication error." };
       }
     }
     return { error: "Something went wrong. Please try again." };
