@@ -1,55 +1,37 @@
 "use client";
 
 import { FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { useEffect, useState, useTransition } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { Form, FormField, FormItem } from "@/components/ui/form";
+import { useState, useTransition } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { LoginSchema } from "@/schema";
-import { LoginFields } from "@/utils/loginFields";
+import { ResetSchema } from "@/schema";
+import { resetFields } from "@/utils/resetFields";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { login } from "@/actions/login";
+import { reset } from "@/actions/reset";
 
 import CardWrapper from "@/components/elements/card-wrapper";
 import FormSuccess from "@/components/elements/form-success";
 import FormErrors from "@/components/elements/form-error";
-import Link from "next/link";
 
 import * as z from "zod";
 
-export type FormValues = z.infer<typeof LoginSchema>;
+export type FormValues = z.infer<typeof ResetSchema>;
 
-const LoginForm = () => {
-  // ============ Search Params =============
-  const searchParams = useSearchParams();
-  const urlError =
-    searchParams.get("error") === "OAuthAccountNotLinked"
-      ? "Email already in use with different provider!"
-      : "";
-
-  //  =========== Route ===============
-  const route = useRouter();
-
+const ResetForm = () => {
   //  =========== State ===============
   const [success, setSuccess] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
-
-  // ============ Handle URL Error ===============
-  useEffect(() => {
-    if (urlError) setError(urlError);
-  }, [urlError]);
 
   // ============ Start transition ===============
   const [isPending, startTransition] = useTransition();
 
   // ============ Form Setup ===============
   const form = useForm<FormValues>({
-    resolver: zodResolver(LoginSchema),
+    resolver: zodResolver(ResetSchema),
     defaultValues: {
       email: "",
-      password: "",
     },
   });
 
@@ -58,13 +40,13 @@ const LoginForm = () => {
     setError("");
     setSuccess("");
     startTransition(() => {
-      login(values).then((data) => {
-        if (data?.error) {
+      reset(values).then((data) => {
+        if ("error" in data) {
           if (typeof data.error === "string") {
             setError(data.error);
           } else if (typeof data.error === "object") {
             Object.entries(data.error).forEach(([field, messages]) => {
-              if (messages?.length) {
+              if (Array.isArray(messages) && messages.length) {
                 form.setError(field as keyof FormValues, {
                   type: "manual",
                   message: messages[0],
@@ -73,8 +55,10 @@ const LoginForm = () => {
             });
           }
         }
-        if (data?.success) setSuccess(data.success);
-        if (data?.redirect) route.push(data.redirect);
+
+        if ("success" in data) {
+          setSuccess(data.success);
+        }
       });
     });
   };
@@ -82,14 +66,13 @@ const LoginForm = () => {
   // ============ Rendering ===============
   return (
     <CardWrapper
-      headerLabel="Welcome Back!"
-      backBtnHref="/auth/register"
-      backBtnLabel="Don't have an account?"
-      showSocial
+      headerLabel="Forgot Your Password?"
+      backBtnHref="/auth/login"
+      backBtnLabel="Back to Login"
     >
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {LoginFields.map((field) => (
+          {resetFields.map((field) => (
             <FormField
               key={field.name}
               control={form.control}
@@ -110,20 +93,12 @@ const LoginForm = () => {
               )}
             />
           ))}
-          <Button
-            size={"sm"}
-            variant="link"
-            asChild
-            className="px-0 font-normal"
-          >
-            <Link href={"/auth/reset"}>Forgot password?</Link>
-          </Button>
 
           {error && <FormErrors message={error} />}
           {success && <FormSuccess message={success} />}
 
           <Button disabled={isPending} type="submit" className="w-full">
-            Login
+            Send Reset Email
           </Button>
         </form>
       </Form>
@@ -131,4 +106,4 @@ const LoginForm = () => {
   );
 };
 
-export default LoginForm;
+export default ResetForm;
