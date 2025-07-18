@@ -27,18 +27,29 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
   },
 
   callbacks: {
+    async signIn({ user, account }) {
+      if (account?.provider !== "credentials") {
+        const existingUser = await db.user.findUnique({
+          where: { email: user.email ?? "" },
+        });
+        if (existingUser && existingUser.id !== user.id)
+          throw new Error("OAuthAccountNotLinked");
+        return true;
+      }
+      const existingUser = await getUserById(user.id);
+      if (!existingUser) return true;
+      if (!existingUser.emailVerified) return false;
+      return true;
+    },
     async jwt({ token }) {
       if (!token.sub) return token;
-
       const user = await getUserById(token.sub);
       if (!user) throw new Error("User not found");
-
       token.id = user.id;
       token.role = user.role;
       token.name = user.name ?? undefined;
       token.email = user.email ?? undefined;
       token.picture = user.image ?? undefined;
-
       return token;
     },
 

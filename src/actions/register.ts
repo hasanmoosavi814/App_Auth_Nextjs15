@@ -1,11 +1,13 @@
 "use server";
 
+import { generateVerificationToken } from "@/lib/token";
 import { RegisterSchema } from "@/schema";
 import { getUserByEmail } from "@/lib/user";
 import { db } from "@/lib/db";
 
 import bcrypt from "bcryptjs";
 import z from "zod";
+import { sendVerificationEmail } from "@/lib/mail";
 
 type RegisterResult =
   | { success: string }
@@ -16,7 +18,6 @@ export const register = async (
   values: z.infer<typeof RegisterSchema>
 ): Promise<RegisterResult> => {
   const validatedField = RegisterSchema.safeParse(values);
-
   if (!validatedField.success) {
     const errors = validatedField.error.flatten().fieldErrors;
     return { error: errors };
@@ -33,5 +34,7 @@ export const register = async (
       password: hashedPassword,
     },
   });
-  return { success: "Account created successfully!" };
+  const verificationToken = await generateVerificationToken(email);
+  await sendVerificationEmail(verificationToken.email, verificationToken.token);
+  return { success: "Confirmation email sent!" };
 };
