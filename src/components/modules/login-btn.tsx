@@ -3,7 +3,7 @@
 import { ILoginBtn } from "@/types/modules";
 import { useRouter } from "next/navigation";
 
-const LoginBtn = ({ children, mode = "redirect", asChild }: ILoginBtn) => {
+const LoginBtn = ({ children, mode = "redirect" }: ILoginBtn) => {
   // ============ Router =============
   const router = useRouter();
 

@@ -1,12 +1,12 @@
 "use client";
 
 import { FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { useEffect, useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Form, FormField, FormItem } from "@/components/ui/form";
-import { useState, useTransition } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LoginSchema } from "@/schema";
 import { LoginFields } from "@/utils/loginFields";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,12 +21,24 @@ import * as z from "zod";
 export type FormValues = z.infer<typeof LoginSchema>;
 
 const LoginForm = () => {
+  // ============ Search Params =============
+  const searchParams = useSearchParams();
+  const urlError =
+    searchParams.get("error") === "OAuthAccountNotLinked"
+      ? "Email already in use with different provider!"
+      : "";
+
   //  =========== Route ===============
   const route = useRouter();
 
   //  =========== State ===============
   const [success, setSuccess] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
+
+  // ============ Handle URL Error ===============
+  useEffect(() => {
+    if (urlError) setError(urlError);
+  }, [urlError]);
 
   // ============ Start transition ===============
   const [isPending, startTransition] = useTransition();
