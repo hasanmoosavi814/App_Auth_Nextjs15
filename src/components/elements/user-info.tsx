@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader } from "../ui/card";
 import type { Session } from "next-auth";
 import { Badge } from "../ui/badge";
 
-import InfoRow from "../elements/InfoRow";
+import InfoRow from "./InfoRow";
 
 interface UserInfoProps {
   user?: Session["user"];
@@ -17,7 +17,7 @@ const UserInfo = ({ user, label }: UserInfoProps) => {
       </CardHeader>
       <CardContent className="space-y-4">
         <InfoRow label="User ID" value={user?.id} />
-        <InfoRow label="Name" value={user?.name} />
+        <InfoRow label="Name" value={user?.name?.toUpperCase()} />
         <InfoRow label="Email" value={user?.email} />
         <InfoRow label="Role" value={user?.role} />
         <InfoRow
