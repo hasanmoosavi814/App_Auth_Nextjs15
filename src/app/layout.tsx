@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
 import { SessionProvider } from "next-auth/react";
+import type { Metadata } from "next";
+import { Toaster } from "@/components/ui/sonner";
 import { auth } from "@/auth";
 
 import "./globals.css";
@@ -18,7 +19,10 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <SessionProvider session={session}>
-        <body>{children}</body>
+        <body>
+          <Toaster />
+          {children}
+        </body>
       </SessionProvider>
     </html>
   );
