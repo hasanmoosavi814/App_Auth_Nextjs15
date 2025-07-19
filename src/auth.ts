@@ -59,6 +59,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       token.name = user.name ?? undefined;
       token.email = user.email ?? undefined;
       token.picture = user.image ?? undefined;
+      token.isTwoFactorEnabled = user.isTwoFactorEnabled;
       return token;
     },
     async session({ session, token }) {
@@ -68,7 +69,10 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           ...session.user,
           id: token.id,
           role: token.role,
+          name: token.name,
+          email: token.email,
           image: token.picture,
+          isTwoFactorEnabled: token.isTwoFactorEnabled,
         },
       };
     },
