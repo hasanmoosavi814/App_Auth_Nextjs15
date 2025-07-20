@@ -9,30 +9,28 @@ import bcrypt from "bcryptjs";
 
 export default {
   providers: [
-    // === Credentials login ===
+    // ========== Credentials login ===============
     Credentials({
       async authorize(credentials) {
         const validated = LoginSchema.safeParse(credentials);
         if (!validated.success) return null;
-
         const { email, password } = validated.data;
         const user = await getUserByEmail(email);
         if (!user || !user.password) return null;
-
         const isValid = await bcrypt.compare(password, user.password);
         if (!isValid) return null;
-
         return {
           id: user.id,
+          role: user.role,
           name: user.name ?? undefined,
           email: user.email ?? undefined,
           image: user.image ?? undefined,
-          role: user.role,
+          isTwoFactorEnabled: user.isTwoFactorEnabled,
         };
       },
     }),
 
-    // === GitHub OAuth ===
+    // ============== GitHub OAuth ===============
     GitHub({
       clientId: process.env.GITHUB_CLIENT_ID!,
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
