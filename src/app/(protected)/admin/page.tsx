@@ -45,7 +45,7 @@ const AdminPage = () => {
           <p className="text-sm font-medium text-center">
             🔐 Admin-Only API Route
           </p>
-          <Button onClick={onApiRouteClick} className="w-full sm:w-auto">
+          <Button onClick={onApiRouteClick} className="sm:w-auto">
             Trigger API Call
           </Button>
         </div>

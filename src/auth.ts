@@ -6,6 +6,7 @@ import { db } from "./lib/db";
 
 import authConfig from "./auth.config";
 import NextAuth from "next-auth";
+import { getAccountByUserId } from "./lib/account";
 
 const prisma = new PrismaClient();
 
@@ -55,8 +56,10 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       if (!token.sub) return token;
       const user = await getUserById(token.sub);
       if (!user) throw new Error("User not found");
+      const existingAccount = await getAccountByUserId(user.id);
       token.id = user.id;
       token.role = user.role;
+      token.isOAuth = !!existingAccount;
       token.name = user.name ?? undefined;
       token.email = user.email ?? undefined;
       token.picture = user.image ?? undefined;
@@ -73,6 +76,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           name: token.name,
           email: token.email,
           image: token.picture,
+          isOAuth: token.isOAuth as boolean,
           isTwoFactorEnabled: token.isTwoFactorEnabled,
         },
       };
